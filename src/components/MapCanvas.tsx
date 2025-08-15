@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Plane, Line } from '@react-three/drei';
+import { OrbitControls, Plane, Line, Box, Text } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface Point {
@@ -22,9 +22,10 @@ interface MapCanvasProps {
   drawingMode: 'fence' | 'path' | 'waypoint';
   onPathCreated: (path: Path) => void;
   paths: Path[];
+  onCoordinateClick?: (x: number, y: number, z: number) => void;
 }
 
-function MapMesh({ isDrawing, drawingMode, onPathCreated, paths }: MapCanvasProps) {
+function MapMesh({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateClick }: MapCanvasProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { camera, raycaster, pointer, scene } = useThree();
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
@@ -44,6 +45,13 @@ function MapMesh({ isDrawing, drawingMode, onPathCreated, paths }: MapCanvasProp
       if (intersects.length > 0) {
         const point = intersects[0].point;
         const newPoint = { x: point.x, y: point.y, z: point.z };
+        
+        // Show coordinates to user
+        onCoordinateClick?.(
+          Math.round(point.x * 100) / 100, 
+          Math.round(point.y * 100) / 100, 
+          Math.round(point.z * 100) / 100
+        );
         
         setCurrentPath(prev => [...prev, newPoint]);
       }
@@ -90,7 +98,7 @@ function MapMesh({ isDrawing, drawingMode, onPathCreated, paths }: MapCanvasProp
 
   return (
     <>
-      {/* Main map plane */}
+      {/* Factory floor */}
       <Plane 
         ref={meshRef}
         args={[20, 20]} 
@@ -98,15 +106,34 @@ function MapMesh({ isDrawing, drawingMode, onPathCreated, paths }: MapCanvasProp
         position={[0, 0, 0]}
       >
         <meshStandardMaterial 
-          color="#1e293b" 
+          color="#2c3e50" 
           transparent 
-          opacity={0.8}
+          opacity={0.9}
           wireframe={false}
         />
       </Plane>
 
-      {/* Grid overlay */}
-      <gridHelper args={[20, 20, '#334155', '#334155']} position={[0, 0.01, 0]} />
+      {/* Factory grid - more industrial look */}
+      <gridHelper args={[20, 40, '#34495e', '#34495e']} position={[0, 0.01, 0]} />
+      
+      {/* Factory machinery/equipment areas */}
+      <Box position={[-6, 0.5, -6]} args={[3, 1, 2]}>
+        <meshStandardMaterial color="#e74c3c" />
+      </Box>
+      <Box position={[6, 0.5, -6]} args={[2, 1, 3]}>
+        <meshStandardMaterial color="#3498db" />
+      </Box>
+      <Box position={[-3, 0.5, 5]} args={[4, 1, 2]}>
+        <meshStandardMaterial color="#f39c12" />
+      </Box>
+      <Box position={[5, 0.5, 6]} args={[2, 1, 2]}>
+        <meshStandardMaterial color="#9b59b6" />
+      </Box>
+      
+      {/* Assembly line */}
+      <Box position={[0, 0.2, 0]} args={[12, 0.4, 1]}>
+        <meshStandardMaterial color="#95a5a6" />
+      </Box>
 
       {/* Render saved paths */}
       {paths.map((path) => {
@@ -148,7 +175,7 @@ function MapMesh({ isDrawing, drawingMode, onPathCreated, paths }: MapCanvasProp
   );
 }
 
-export function MapCanvas({ isDrawing, drawingMode, onPathCreated, paths }: MapCanvasProps) {
+export function MapCanvas({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateClick }: MapCanvasProps) {
   return (
     <div className="w-full h-full bg-background rounded-lg overflow-hidden shadow-elevated">
       <Canvas
@@ -169,6 +196,7 @@ export function MapCanvas({ isDrawing, drawingMode, onPathCreated, paths }: MapC
           drawingMode={drawingMode}
           onPathCreated={onPathCreated}
           paths={paths}
+          onCoordinateClick={onCoordinateClick}
         />
         
         <OrbitControls 

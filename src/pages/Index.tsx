@@ -23,6 +23,7 @@ const Index = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingMode, setDrawingMode] = useState<'fence' | 'path' | 'waypoint'>('fence');
   const [paths, setPaths] = useState<Path[]>([]);
+  const [lastCoordinate, setLastCoordinate] = useState<{x: number, y: number, z: number} | null>(null);
 
   const handlePathCreated = (newPath: Path) => {
     setPaths(prev => [...prev, newPath]);
@@ -62,6 +63,11 @@ const Index = () => {
     }
   };
 
+  const handleCoordinateClick = (x: number, y: number, z: number) => {
+    setLastCoordinate({ x, y, z });
+    toast.info(`Clicked at coordinates: X=${x}, Y=${y}, Z=${z}`);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <MapHeader 
@@ -83,12 +89,24 @@ const Index = () => {
         />
         
         <main className="flex-1 p-4">
-          <MapCanvas
-            isDrawing={isDrawing}
-            drawingMode={drawingMode}
-            onPathCreated={handlePathCreated}
-            paths={paths}
-          />
+          <div className="h-full flex flex-col">
+            {lastCoordinate && (
+              <div className="mb-4 p-3 bg-card rounded-lg border">
+                <p className="text-sm font-medium text-foreground">
+                  พิกัดล่าสุด: X={lastCoordinate.x}, Y={lastCoordinate.y}, Z={lastCoordinate.z}
+                </p>
+              </div>
+            )}
+            <div className="flex-1">
+              <MapCanvas
+                isDrawing={isDrawing}
+                drawingMode={drawingMode}
+                onPathCreated={handlePathCreated}
+                paths={paths}
+                onCoordinateClick={handleCoordinateClick}
+              />
+            </div>
+          </div>
         </main>
       </div>
     </div>
