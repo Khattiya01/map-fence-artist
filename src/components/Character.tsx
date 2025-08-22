@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useBox } from '@react-three/cannon';
+import { useBox, usePlane } from '@react-three/cannon';
 import * as THREE from 'three';
 
 interface CharacterProps {
@@ -16,18 +16,22 @@ export function Character({ position, paths }: CharacterProps) {
   const [ref, api] = useBox(() => ({
     mass: 1,
     position,
-    args: [0.8, 1.6, 0.8], // ความกว้าง, ความสูง, ความลึก
+    args: [0.8, 1.6, 0.8],
     material: {
-      friction: 0.3,
+      friction: 0.8,
       restitution: 0.1,
     },
+    fixedRotation: true, // ป้องกันไม่ให้ตัวละครล้ม
   }));
 
   const { camera, pointer, raycaster } = useThree();
   const [keys, setKeys] = useState<{ [key: string]: boolean }>({});
   const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
   const velocity = useRef([0, 0, 0]);
-  const currentPosition = useRef([0, 0.8, 0]);
+  const currentPosition = useRef(position);
+  const isMoving = useRef(false);
+
+  console.log('Character component loaded with position:', position);
 
   // ฟังก์ชันตรวจสอบการชนเส้น fence
   const checkFenceCollision = (newPosition: THREE.Vector3) => {
@@ -60,14 +64,21 @@ export function Character({ position, paths }: CharacterProps) {
   // จัดการคีย์บอร์ด
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      console.log('Key pressed:', event.code);
       setKeys(prev => ({ ...prev, [event.code]: true }));
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      console.log('Key released:', event.code);
       setKeys(prev => ({ ...prev, [event.code]: false }));
     };
 
     const handleClick = (event: MouseEvent) => {
+      // ตรวจสอบว่าไม่ใช่การคลิกบน UI elements
+      if ((event.target as HTMLElement).closest('.sidebar')) return;
+      
+      console.log('Canvas clicked for character movement');
+      
       // คำนวณตำแหน่งที่คลิก
       const rect = (event.target as HTMLCanvasElement).getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -84,6 +95,9 @@ export function Character({ position, paths }: CharacterProps) {
         // ตรวจสอบว่าตำแหน่งเป้าหมายไม่ชนกับ fence
         if (!checkFenceCollision(intersectPoint)) {
           setTargetPosition(intersectPoint.clone());
+          console.log('Target position set:', intersectPoint);
+        } else {
+          console.log('Target blocked by fence');
         }
       }
     };
@@ -106,46 +120,76 @@ export function Character({ position, paths }: CharacterProps) {
   }, [camera, pointer, raycaster, paths]);
 
   // อัพเดทตำแหน่งตัวละคร
-  useFrame(() => {
-    if (!api) return;
+  useFrame((state, delta) => {
+    if (!api || !api.velocity) {
+      console.log('API not ready');
+      return;
+    }
 
     // การเคลื่อนไหวด้วยคีย์บอร์ด
-    const speed = 5;
+    const speed = 8;
     let moveX = 0;
     let moveZ = 0;
 
-    if (keys['KeyW'] || keys['ArrowUp']) moveZ -= speed;
-    if (keys['KeyS'] || keys['ArrowDown']) moveZ += speed;
-    if (keys['KeyA'] || keys['ArrowLeft']) moveX -= speed;
-    if (keys['KeyD'] || keys['ArrowRight']) moveX += speed;
+    if (keys['KeyW'] || keys['ArrowUp']) {
+      moveZ -= speed;
+      isMoving.current = true;
+      console.log('Moving forward');
+    }
+    if (keys['KeyS'] || keys['ArrowDown']) {
+      moveZ += speed;
+      isMoving.current = true;
+      console.log('Moving backward');
+    }
+    if (keys['KeyA'] || keys['ArrowLeft']) {
+      moveX -= speed;
+      isMoving.current = true;
+      console.log('Moving left');
+    }
+    if (keys['KeyD'] || keys['ArrowRight']) {
+      moveX += speed;
+      isMoving.current = true;
+      console.log('Moving right');
+    }
 
     // การเคลื่อนไหวไปยังตำแหน่งเป้าหมาย
     if (targetPosition) {
       const direction = targetPosition.clone().sub(new THREE.Vector3(...currentPosition.current));
       direction.y = 0; // ไม่เคลื่อนที่ในแนวแกน Y
       
-      if (direction.length() > 0.1) {
+      if (direction.length() > 0.3) {
         direction.normalize();
         moveX += direction.x * speed;
         moveZ += direction.z * speed;
+        isMoving.current = true;
+        console.log('Moving to target:', targetPosition);
       } else {
         setTargetPosition(null);
+        console.log('Reached target');
       }
     }
 
     // ตรวจสอบการชนกับ fence ก่อนเคลื่อนไหว
     const newPosition = new THREE.Vector3(
-      currentPosition.current[0] + moveX * 0.016,
+      currentPosition.current[0] + moveX * delta,
       currentPosition.current[1],
-      currentPosition.current[2] + moveZ * 0.016
+      currentPosition.current[2] + moveZ * delta
     );
 
     if (!checkFenceCollision(newPosition)) {
       api.velocity.set(moveX, velocity.current[1], moveZ);
+      console.log('Setting velocity:', moveX, velocity.current[1], moveZ);
     } else {
       api.velocity.set(0, velocity.current[1], 0);
       setTargetPosition(null); // ยกเลิกเป้าหมายถ้าชน fence
+      console.log('Movement blocked by fence');
     }
+
+    if (!isMoving.current && Math.abs(moveX) === 0 && Math.abs(moveZ) === 0) {
+      api.velocity.set(0, velocity.current[1], 0);
+    }
+    
+    isMoving.current = false;
 
     // อัพเดทตำแหน่งปัจจุบัน
     api.position.subscribe((position) => {

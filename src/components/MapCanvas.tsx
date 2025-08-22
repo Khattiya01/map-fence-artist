@@ -4,6 +4,7 @@ import { OrbitControls, Plane, Line, Box, Text } from '@react-three/drei';
 import { Physics } from '@react-three/cannon';
 import * as THREE from 'three';
 import { Character } from './Character';
+import { GroundPlane, PhysicsMachinery } from './PhysicsComponents';
 
 interface Point {
   x: number;
@@ -30,6 +31,7 @@ interface MapCanvasProps {
 }
 
 function MapMesh({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateClick, hasCharacter, characterPosition }: MapCanvasProps) {
+  // ใช้ mesh ธรรมดาสำหรับ raycasting แทน
   const meshRef = useRef<THREE.Mesh>(null);
   const { camera, raycaster, pointer, scene } = useThree();
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
@@ -105,42 +107,22 @@ function MapMesh({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateCli
 
   return (
     <>
-      {/* Factory floor */}
-      <Plane 
+      {/* พื้นและเครื่องจักรที่มี physics */}
+      <GroundPlane />
+      <PhysicsMachinery />
+
+      {/* Invisible plane for raycasting */}
+      <mesh 
         ref={meshRef}
-        args={[20, 20]} 
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0, 0]}
+        position={[0, 0.01, 0]}
+        visible={false}
       >
-        <meshStandardMaterial 
-          color="#2c3e50" 
-          transparent 
-          opacity={0.9}
-          wireframe={false}
-        />
-      </Plane>
+        <planeGeometry args={[50, 50]} />
+      </mesh>
 
       {/* Factory grid - more industrial look */}
       <gridHelper args={[20, 40, '#34495e', '#34495e']} position={[0, 0.01, 0]} />
-      
-      {/* Factory machinery/equipment areas */}
-      <Box position={[-6, 0.5, -6]} args={[3, 1, 2]}>
-        <meshStandardMaterial color="#e74c3c" />
-      </Box>
-      <Box position={[6, 0.5, -6]} args={[2, 1, 3]}>
-        <meshStandardMaterial color="#3498db" />
-      </Box>
-      <Box position={[-3, 0.5, 5]} args={[4, 1, 2]}>
-        <meshStandardMaterial color="#f39c12" />
-      </Box>
-      <Box position={[5, 0.5, 6]} args={[2, 1, 2]}>
-        <meshStandardMaterial color="#9b59b6" />
-      </Box>
-      
-      {/* Assembly line */}
-      <Box position={[0, 0.2, 0]} args={[12, 0.4, 1]}>
-        <meshStandardMaterial color="#95a5a6" />
-      </Box>
 
       {/* Render saved paths */}
       {paths.map((path) => {
