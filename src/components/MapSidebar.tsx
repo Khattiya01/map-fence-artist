@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { CharacterControls } from './CharacterControls';
 import { 
   PenTool, 
   Route, 
@@ -32,6 +33,10 @@ interface MapSidebarProps {
   onPathDelete: (pathId: string) => void;
   onPathRename: (pathId: string, newName: string) => void;
   onClearAll: () => void;
+  hasCharacter: boolean;
+  onAddCharacter: () => void;
+  onRemoveCharacter: () => void;
+  onResetCharacterPosition: () => void;
 }
 
 export function MapSidebar({
@@ -42,7 +47,11 @@ export function MapSidebar({
   paths,
   onPathDelete,
   onPathRename,
-  onClearAll
+  onClearAll,
+  hasCharacter,
+  onAddCharacter,
+  onRemoveCharacter,
+  onResetCharacterPosition
 }: MapSidebarProps) {
   const [pathName, setPathName] = useState('');
   const [editingPath, setEditingPath] = useState<string | null>(null);
@@ -133,6 +142,14 @@ export function MapSidebar({
           </div>
         </CardContent>
       </Card>
+
+      {/* Character Control */}
+      <CharacterControls
+        hasCharacter={hasCharacter}
+        onAddCharacter={onAddCharacter}
+        onRemoveCharacter={onRemoveCharacter}
+        onResetPosition={onResetCharacterPosition}
+      />
 
       {/* Path List */}
       <Card className="bg-sidebar-accent border-sidebar-border">

@@ -24,6 +24,8 @@ const Index = () => {
   const [drawingMode, setDrawingMode] = useState<'fence' | 'path' | 'waypoint'>('fence');
   const [paths, setPaths] = useState<Path[]>([]);
   const [lastCoordinate, setLastCoordinate] = useState<{x: number, y: number, z: number} | null>(null);
+  const [hasCharacter, setHasCharacter] = useState(false);
+  const [characterPosition, setCharacterPosition] = useState<[number, number, number]>([0, 0.8, 0]);
 
   const handlePathCreated = (newPath: Path) => {
     setPaths(prev => [...prev, newPath]);
@@ -68,6 +70,22 @@ const Index = () => {
     toast.info(`Clicked at coordinates: X=${x}, Y=${y}, Z=${z}`);
   };
 
+  const handleAddCharacter = () => {
+    setHasCharacter(true);
+    setCharacterPosition([0, 0.8, 0]);
+    toast.success('Character added to the map');
+  };
+
+  const handleRemoveCharacter = () => {
+    setHasCharacter(false);
+    toast.success('Character removed from the map');
+  };
+
+  const handleResetCharacterPosition = () => {
+    setCharacterPosition([0, 0.8, 0]);
+    toast.success('Character position reset');
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <MapHeader 
@@ -86,6 +104,10 @@ const Index = () => {
           onPathDelete={handlePathDelete}
           onPathRename={handlePathRename}
           onClearAll={handleClearAll}
+          hasCharacter={hasCharacter}
+          onAddCharacter={handleAddCharacter}
+          onRemoveCharacter={handleRemoveCharacter}
+          onResetCharacterPosition={handleResetCharacterPosition}
         />
         
         <main className="flex-1 p-4">
@@ -104,6 +126,8 @@ const Index = () => {
                 onPathCreated={handlePathCreated}
                 paths={paths}
                 onCoordinateClick={handleCoordinateClick}
+                hasCharacter={hasCharacter}
+                characterPosition={characterPosition}
               />
             </div>
           </div>

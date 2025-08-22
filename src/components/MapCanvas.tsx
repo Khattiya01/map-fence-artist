@@ -1,7 +1,9 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Plane, Line, Box, Text } from '@react-three/drei';
+import { Physics } from '@react-three/cannon';
 import * as THREE from 'three';
+import { Character } from './Character';
 
 interface Point {
   x: number;
@@ -23,16 +25,18 @@ interface MapCanvasProps {
   onPathCreated: (path: Path) => void;
   paths: Path[];
   onCoordinateClick?: (x: number, y: number, z: number) => void;
+  hasCharacter: boolean;
+  characterPosition: [number, number, number];
 }
 
-function MapMesh({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateClick }: MapCanvasProps) {
+function MapMesh({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateClick, hasCharacter, characterPosition }: MapCanvasProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { camera, raycaster, pointer, scene } = useThree();
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
-      if (!isDrawing || !meshRef.current) return;
+      if ((!isDrawing && !hasCharacter) || !meshRef.current) return;
 
       // Update raycaster with current mouse position
       const rect = (event.target as HTMLCanvasElement).getBoundingClientRect();
@@ -53,7 +57,10 @@ function MapMesh({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateCli
           Math.round(point.z * 100) / 100
         );
         
-        setCurrentPath(prev => [...prev, newPoint]);
+        // Only add point if drawing mode is active
+        if (isDrawing) {
+          setCurrentPath(prev => [...prev, newPoint]);
+        }
       }
     };
 
@@ -87,7 +94,7 @@ function MapMesh({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateCli
         window.removeEventListener('keydown', handleKeyPress);
       }
     };
-  }, [isDrawing, drawingMode, currentPath, camera, raycaster, pointer, onPathCreated]);
+  }, [isDrawing, drawingMode, currentPath, camera, raycaster, pointer, onPathCreated, hasCharacter]);
 
   // Clear current path when drawing mode changes
   useEffect(() => {
@@ -171,11 +178,19 @@ function MapMesh({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateCli
           />
         </mesh>
       ))}
+
+      {/* Character */}
+      {hasCharacter && (
+        <Character 
+          position={characterPosition}
+          paths={paths}
+        />
+      )}
     </>
   );
 }
 
-export function MapCanvas({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateClick }: MapCanvasProps) {
+export function MapCanvas({ isDrawing, drawingMode, onPathCreated, paths, onCoordinateClick, hasCharacter, characterPosition }: MapCanvasProps) {
   return (
     <div className="w-full h-full bg-background rounded-lg overflow-hidden shadow-elevated">
       <Canvas
@@ -191,13 +206,17 @@ export function MapCanvas({ isDrawing, drawingMode, onPathCreated, paths, onCoor
         />
         <pointLight position={[0, 10, 0]} intensity={0.5} color="#00d9ff" />
         
-        <MapMesh 
-          isDrawing={isDrawing}
-          drawingMode={drawingMode}
-          onPathCreated={onPathCreated}
-          paths={paths}
-          onCoordinateClick={onCoordinateClick}
-        />
+        <Physics gravity={[0, -30, 0]}>
+          <MapMesh 
+            isDrawing={isDrawing}
+            drawingMode={drawingMode}
+            onPathCreated={onPathCreated}
+            paths={paths}
+            onCoordinateClick={onCoordinateClick}
+            hasCharacter={hasCharacter}
+            characterPosition={characterPosition}
+          />
+        </Physics>
         
         <OrbitControls 
           enablePan={true}
